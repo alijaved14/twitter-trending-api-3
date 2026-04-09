@@ -27,21 +27,21 @@ export class TwitterScraper {
     // Cookie-based auth takes priority — more stable, avoids login challenges
     if (twitterCookies) {
       console.log('[Scraper] Authenticating via TWITTER_COOKIES...');
-      let cookies: Array<{ name: string; value: string; domain?: string; path?: string }>;
-      try {
-        cookies = JSON.parse(twitterCookies);
-      } catch {
-        throw new Error('TWITTER_COOKIES is not valid JSON. Export cookies as JSON array from your browser.');
+      const cookieStrings = this._parseCookies(twitterCookies);
+      if (cookieStrings.length === 0) {
+        console.warn('[Scraper] TWITTER_COOKIES parsed to empty list — falling back to username/password.');
+      } else {
+        await this.scraper.setCookies(cookieStrings);
+        const loggedIn = await this.scraper.isLoggedIn();
+        if (loggedIn) {
+          this.isLoggedIn = true;
+          console.log('[Scraper] Cookie auth successful.');
+          return;
+        }
+        console.warn('[Scraper] Cookie auth failed (expired?) — falling back to username/password.');
+        // Reset scraper instance so stale cookies don't interfere
+        this.scraper = new Scraper();
       }
-      const cookieStrings = cookies.map(
-        (c) => `${c.name}=${c.value}; Domain=${c.domain ?? '.twitter.com'}; Path=${c.path ?? '/'}`
-      );
-      await this.scraper.setCookies(cookieStrings);
-      const loggedIn = await this.scraper.isLoggedIn();
-      if (!loggedIn) throw new Error('Cookie auth failed — cookies may be expired. Update TWITTER_COOKIES.');
-      this.isLoggedIn = true;
-      console.log('[Scraper] Cookie auth successful.');
-      return;
     }
 
     if (!twitterUsername || !twitterPassword) {
@@ -52,6 +52,36 @@ export class TwitterScraper {
     await this.scraper.login(twitterUsername, twitterPassword, twitterEmail || undefined);
     this.isLoggedIn = true;
     console.log('[Scraper] Login successful.');
+  }
+
+  /**
+   * Accepts cookies in two formats:
+   *   1. JSON array: [{"name":"auth_token","value":"xxx",...}, ...]
+   *   2. Raw string: "auth_token=xxx; ct0=yyy; ..."
+   * Returns an array of Set-Cookie-compatible strings.
+   */
+  private _parseCookies(raw: string): string[] {
+    const trimmed = raw.trim();
+
+    // Try JSON array first
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed: Array<{ name: string; value: string; domain?: string; path?: string }> =
+          JSON.parse(trimmed);
+        return parsed.map(
+          (c) => `${c.name}=${c.value}; Domain=${c.domain ?? '.twitter.com'}; Path=${c.path ?? '/'}`
+        );
+      } catch {
+        console.warn('[Scraper] TWITTER_COOKIES looks like JSON but failed to parse — trying raw format.');
+      }
+    }
+
+    // Fall back to raw "key=value; key=value" string
+    return trimmed
+      .split(';')
+      .map((pair) => pair.trim())
+      .filter(Boolean)
+      .map((pair) => `${pair}; Domain=.twitter.com; Path=/`);
   }
 
   async relogin(): Promise<void> {
