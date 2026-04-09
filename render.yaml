@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: twitter-trending-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: TWITTER_USERNAME
+        sync: false
+      - key: TWITTER_PASSWORD
+        sync: false
+      - key: TWITTER_EMAIL
+        sync: false
+      - key: MIN_FOLLOWERS
+        value: 1000
+      - key: BUFFER_SIZE
+        value: 200
+      - key: POLL_INTERVAL_MS
+        value: 3000
+      - key: PROFILE_CACHE_TTL_MS
+        value: 3600000
