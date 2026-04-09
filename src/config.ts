@@ -3,9 +3,13 @@ dotenv.config();
 
 export const config = {
   port: parseInt(process.env.PORT || '3000'),
+  apiSecret: process.env.API_SECRET || '',
   twitterUsername: process.env.TWITTER_USERNAME || '',
   twitterPassword: process.env.TWITTER_PASSWORD || '',
   twitterEmail: process.env.TWITTER_EMAIL || '',
+  // Cookies JSON string, e.g. export from a browser extension like "EditThisCookie"
+  // Takes priority over username/password login when set
+  twitterCookies: process.env.TWITTER_COOKIES || '',
   minFollowers: parseInt(process.env.MIN_FOLLOWERS || '1000'),
   bufferSize: parseInt(process.env.BUFFER_SIZE || '200'),
   pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS || '3000'),

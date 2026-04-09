@@ -12,6 +12,10 @@ services:
         value: production
       - key: PORT
         value: 3000
+      - key: API_SECRET
+        sync: false
+      - key: TWITTER_COOKIES
+        sync: false
       - key: TWITTER_USERNAME
         sync: false
       - key: TWITTER_PASSWORD

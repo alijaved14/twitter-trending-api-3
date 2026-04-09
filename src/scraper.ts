@@ -22,9 +22,30 @@ export class TwitterScraper {
   }
 
   private async _login(): Promise<void> {
-    const { twitterUsername, twitterPassword, twitterEmail } = config;
+    const { twitterUsername, twitterPassword, twitterEmail, twitterCookies } = config;
+
+    // Cookie-based auth takes priority — more stable, avoids login challenges
+    if (twitterCookies) {
+      console.log('[Scraper] Authenticating via TWITTER_COOKIES...');
+      let cookies: Array<{ name: string; value: string; domain?: string; path?: string }>;
+      try {
+        cookies = JSON.parse(twitterCookies);
+      } catch {
+        throw new Error('TWITTER_COOKIES is not valid JSON. Export cookies as JSON array from your browser.');
+      }
+      const cookieStrings = cookies.map(
+        (c) => `${c.name}=${c.value}; Domain=${c.domain ?? '.twitter.com'}; Path=${c.path ?? '/'}`
+      );
+      await this.scraper.setCookies(cookieStrings);
+      const loggedIn = await this.scraper.isLoggedIn();
+      if (!loggedIn) throw new Error('Cookie auth failed — cookies may be expired. Update TWITTER_COOKIES.');
+      this.isLoggedIn = true;
+      console.log('[Scraper] Cookie auth successful.');
+      return;
+    }
+
     if (!twitterUsername || !twitterPassword) {
-      throw new Error('TWITTER_USERNAME and TWITTER_PASSWORD must be set in .env');
+      throw new Error('Set TWITTER_COOKIES or both TWITTER_USERNAME and TWITTER_PASSWORD in .env');
     }
 
     console.log(`[Scraper] Logging in as @${twitterUsername}...`);
